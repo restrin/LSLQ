@@ -34,13 +34,15 @@ while ( k < maxiter )
     v = v/alpha;
 
     if (k >= 2)
-        % Estimating norm of residual
-        r = [alphap*betap (alphap^2 + beta^2); 0 alpha*beta]*y;
-        nr = norm(r);
+        % Estimating norm of A'*r
+        Atr = [alphap*betap (alphap^2 + beta^2); 0 alpha*beta]*y;
+        nAtr = norm(Atr);
         
-        resvec(k) = nr;
+ %       norm(A'*A*x - A'*b) - nAtr
         
-        if (nr < tol*alpha1*nb)
+        resvec(k) = nAtr;
+        
+        if (nAtr < tol*alpha1*nb)
             break;
         end
     end
@@ -75,7 +77,7 @@ while ( k < maxiter )
     else              
         
         % Q
-        thetam1 = theta; %-s1*alphap;
+%        thetam1 = theta; %-s1*alphap;
         rhohat = c1*alphap;
         
         rho = sqrt(rhohat^2 + beta^2);
@@ -88,7 +90,8 @@ while ( k < maxiter )
             q = q(2)*[-c1; s1];
             ry = [rho*y(2); 0];
             r = norm(q*nb - ry);
-%            norm(A*x - b) - r
+            
+            norm(A*x - b) - r
         %%%%%%%%%
         
         theta = alpha*beta/rho;
@@ -119,6 +122,7 @@ while ( k < maxiter )
     cp = c2;
     sp = s2;
     zzp = zz;
+    thetam1 = theta;
     
     k = k+1;
 end
