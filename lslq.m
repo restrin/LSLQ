@@ -1,4 +1,4 @@
-function [x, flag, relres, normAr, iter, resvec] = lslq( A, b, atol, btol, conlim, maxit )
+function [x, flag, iter, relres, normAr, resvec] = lslq( A, b, atol, btol, conlim, maxit )
 % LSLQ Least-Squares LQ method
 %   X = LSLQ(A,B) attempts to solve the system of linear equations A*X=B
 %   for X. B is a column vector of length N. The system must be consistent.
@@ -31,6 +31,7 @@ function [x, flag, relres, normAr, iter, resvec] = lslq( A, b, atol, btol, conli
 %      NORM(RES) <= ATOL*NORM(A)*NORM(X) + BTOL*NORM(B) within MAXIT
 %      iterations.
 %    1 LSLQ iterated MAXIT times but did not converge.
+%    2 Estimation of COND(A) > CONLIM
 %    MORE FLAGS TO COME
 %
 %   [X,FLAG,RELRES] = LSLQ(A,B,...) also returns the relative residual
@@ -54,7 +55,7 @@ function [x, flag, relres, normAr, iter, resvec] = lslq( A, b, atol, btol, conli
   elseif isa(A,'function_handle')
     explicitA = false;
   else
-    error('SOL:lsmr:Atype','%s','A must be numeric or a function handle');
+    error('SOL:lslq:Atype','%s','A must be numeric or a function handle');
   end
   
   % Determine dimensions m and n, and
@@ -81,10 +82,10 @@ function [x, flag, relres, normAr, iter, resvec] = lslq( A, b, atol, btol, conli
   
   % Set default parameters.
   
-  if nargin < 3 || isempty(atol)     , atol      = 1e-6;       end
-  if nargin < 4 || isempty(btol)     , btol      = 1e-6;       end
-  if nargin < 5 || isempty(conlim)   , conlim    = 1e+8;       end
-  if nargin < 6 || isempty(maxit)    , maxit     = minDim;     end
+  if nargin < 3 || isempty(atol)     , atol      = 1e-6;            end
+  if nargin < 4 || isempty(btol)     , btol      = 1e-6;            end
+  if nargin < 5 || isempty(conlim)   , conlim    = 1e+8;            end
+  if nargin < 6 || isempty(maxit)    , maxit     = min(minDim, 20); end
   
   alpha = norm(v);
   if alpha > 0
@@ -130,7 +131,9 @@ function [x, flag, relres, normAr, iter, resvec] = lslq( A, b, atol, btol, conli
   q = [c1 s1];
 
   sigmahat = rho;
-
+  maxsigma = rho;
+  minsigma = rho;
+  
   theta = alpha * beta / rho;        
   z     = alphap * n2b / rho;
 
@@ -148,15 +151,14 @@ function [x, flag, relres, normAr, iter, resvec] = lslq( A, b, atol, btol, conli
   
   resvec = zeros(maxit,1);
   
-  for it = 2:maxit
-    
+  for it = 2:(maxit+1)
     alphap = alpha;
     betap = beta;
     cp = c2;
     sp = s2;
     zzp = zz;
     thetap = theta;
-      
+    
     % Golub-Kahan step
     if (explicitA)
       u = A * v  - alpha*u;
@@ -199,7 +201,7 @@ function [x, flag, relres, normAr, iter, resvec] = lslq( A, b, atol, btol, conli
     
     if (n2r < atol*anorm + btol*n2b)
       flag   = 0;
-      iter   = it-1;
+      iter   = it-2;
       relres = n2r;
       normAr = n2Atr;
       resvec = resvec(1:it-1);
@@ -211,7 +213,19 @@ function [x, flag, relres, normAr, iter, resvec] = lslq( A, b, atol, btol, conli
 
     eta = -s2*rho;
     sigmahat = c2*rho;
-
+    
+    maxsigma = max(maxsigma, sigmahat);
+    minsigma = min(minsigma, sigmahat);
+    
+    if (maxsigma/minsigma > conlim)
+      flag   = 2;
+      iter   = it-2;
+      relres = n2r;
+      normAr = n2Atr;
+      resvec = resvec(1:it-1);
+      return;
+    end
+    
     sigma = sqrt(sigmahat^2 + theta^2);
     c2 = sigmahat/sigma;
     s2 = -theta/sigma;
@@ -230,7 +244,7 @@ function [x, flag, relres, normAr, iter, resvec] = lslq( A, b, atol, btol, conli
   
 % We exceeded the maximum number of iterations
 flag   = 1;
-iter   = it;
+iter   = it-1;
 relres = n2r;
 normAr = n2Atr;
   
