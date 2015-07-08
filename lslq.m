@@ -31,7 +31,9 @@ function [x, flag, iter, relres, normAr, resvec] = lslq( A, b, atol, btol, conli
 %      NORM(RES) <= ATOL*NORM(A)*NORM(X) + BTOL*NORM(B) within MAXIT
 %      iterations.
 %    1 LSLQ iterated MAXIT times but did not converge.
-%    2 Estimation of COND(A) > CONLIM
+%    2 Estimation of COND(A) > CONLIM.
+%    3 LSLQ converged to the least-squares solution
+%      NORM(A^T*R)/(NORM(A)*NORM(R)) < ATOL within MAXIT iterations.
 %    MORE FLAGS TO COME
 %
 %   [X,FLAG,RELRES] = LSLQ(A,B,...) also returns the relative residual
@@ -198,7 +200,7 @@ function [x, flag, iter, relres, normAr, resvec] = lslq( A, b, atol, btol, conli
     ry = [rho*y(2); 0]*((-1)^(sign(it-2)-1)); % First iteration is different for some reason
     n2r = norm(q*n2b - ry);
     resvec(it-1) = n2r;
-    
+        
     if (n2r < atol*anorm + btol*n2b)
       flag   = 0;
       iter   = it-2;
@@ -208,6 +210,15 @@ function [x, flag, iter, relres, normAr, resvec] = lslq( A, b, atol, btol, conli
       return;
     end
 
+    if (n2Atr/(anorm*n2r) < atol)
+        flag   = 3;
+        iter   = it-1;
+        relres = n2r;
+        normAr = n2Atr;
+        resvec = resvec(1:it);
+        return;
+    end
+    
     theta = alpha*beta/rho;
     z = -thetap/rho * z;
 
