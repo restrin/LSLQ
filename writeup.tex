@@ -1,0 +1,415 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage[margin=1in]{geometry}
+\usepackage{algorithm}
+\usepackage{algpseudocode} 
+
+% Macros
+\newcommand{\KK}{\mathcal{K}_k}
+\newcommand{\Ik}{\begin{pmatrix} I_{k-1} \\ 0\end{pmatrix}}
+\newcommand{\hQ}{\hat{Q}}
+
+
+\begin{document}
+\title{CME338 Final Project\\
+LSLQ Solver }
+\author{Ron Estrin and Anjan Dwaraknath}
+\date{}
+\maketitle
+
+\section{Abstract}
+
+\section{Introduction}
+\subsection{Notation}
+$\KK = \KK (A^T A, b) = \mathrm{span}\left(b, A^T A b, \dots, (A^T A)^{k-1} b \right)$.
+
+\section{Derivation of LSLQ}
+In this section, we derive the short recurrence formulas for LSLQ beginning from the Golub-Kahan process.
+
+\subsection{Golub-Kahan Process}
+The Golub-Kahan process is defined by the recurrence defined in Algorithm \ref{GK}.
+
+\begin{algorithm}
+\caption{Golub-Kahan Process}
+\label{GK}
+\begin{algorithmic}
+	\State Set $\beta_1 u_1 = b$, $\alpha_1 v_1 = A^T u_1$
+	\For{$k=1,2,\dots$}
+		\State $\beta_{k+1} u_{k+1} = A v_k - \alpha_k u_k$
+		\State $\alpha_{k+1} v_{k+1} = A^T u_{k+1} - \beta_{k+1} v_k$
+	\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+After performing $k$ iterations of this process, we obtain the decompositions
+
+\begin{eqnarray}
+\label{GKdcmp1}
+A V_k &=& U_{k+1} B_k \\
+\label{GKdcmp2}
+A^T U_{k+1} &=& V_{k+1} L^T_{k+1}.
+\end{eqnarray}
+
+where $U_k = \left( u_1  | \dots | u_k \right)$, $V_k = \left( v_1 | \dots | v_k \right)$, and
+
+\begin{equation*}
+B_k = \begin{pmatrix}
+\alpha_1 & & & \\
+\beta_2 & \alpha_2 & & \\
+ & \ddots & \ddots & \\
+ & & \beta_k & \alpha_k \\
+ & & & \beta_{k+1} 
+\end{pmatrix} \qquad L_{k+1} = \begin{pmatrix}
+B_{k+1} | \alpha_{k+1} e_{k+1}
+\end{pmatrix}.
+\end{equation*}
+
+We can then observe that $V_k$ is a basis for $\KK (A^T A, b)$, since
+
+$$ A^T A V_k = A^T U_{k+1} B_k = V_{k+1} L^T_{k+1} B_k = V_{k+1} \begin{pmatrix}
+B^T_k B_k \\
+\alpha_{k+1} \beta_{k+1} e^T_k
+\end{pmatrix}.
+$$
+
+\subsection{The LSLQ subproblem}
+In order to solve the linear system or least squares problem $Ax = b$, we instead solve the normal equations $A^T A = A^T b$. Since $A^T A$ is symmetric positive semidefinite and we assume that the normal equations are consistent, we may consider applying SYMMLQ to this system.
+We solve the normal equations iteratively, where at iteration $k$ we solve the problem
+
+\begin{equation}
+\label{lslqsubproblem}
+\begin{aligned}
+x_k =&& \underset{x \in \KK}{\arg\min} && \Vert x \Vert_2 \\
+&& \text{s.t.} && A^T r \perp \mathcal{K}_{k-1}.
+\end{aligned}
+\end{equation}
+
+where $r = b - Ax$.
+
+In order to solve this problem, we first note that we may formulate this as an unconstrained problem in a smaller space if we minimize in $y_k$ and set $x_k = V_k y_k$. Then
+
+\begin{eqnarray*}
+0 = V_{k-1}^T A^T r_k &=& V_{k-1}^T A^T (b - Ax_k) \\
+&=& V_{k-1}^T A^T b - V_{k-1}^T A^T A V_k y_k \\
+&=& \alpha_1 \beta_1 e_1 - B_{k-1}^T U_k^T A V_k y_k \\
+&=& \alpha_1 \beta_1 e_1 - B_{k-1}^T L_k y_k.
+\end{eqnarray*}
+
+Thus in order to solve \ref{lslqsubproblem}, we can solve
+
+\begin{equation}
+\label{lslqsubproblemy}
+\begin{aligned}
+y_k =&& \underset{y \in \mathbb{R}^k}{\arg\min} && \Vert y \Vert_2 \\
+&& \text{s.t.} && B_{k-1}^T L_k y = \alpha_1 \beta_1 e_1.
+\end{aligned}
+\end{equation}
+
+\subsection{First QR decomposition}
+We first take the QR factorization of $Q_k R_k = B_{k-1}$. Suppose we have the QR factorization of $Q_{k-1}R_{k-1} = B_{k-2}$, with
+
+\begin{equation*}
+R_{k-1} = \begin{pmatrix}
+\rho_1 & \theta_2 & & \\
+& \rho_2 & \ddots & \\
+& & \ddots & \theta_{k-1} \\
+& & & \rho_{k-2}
+\end{pmatrix}.
+\end{equation*}
+
+Then we may recurse to obtain the factorization of $B_{k-1}$
+
+\begin{eqnarray*}
+B_{k-1} &=&
+\begin{pmatrix}\begin{array}{c|c}
+\begin{matrix}
+  \alpha_1  &          &         &      \\
+  \beta_2   & \alpha_2 &         &      \\
+            & \ddots   & \ddots  &      \\
+            &          & \beta_{k-2} & \alpha_{k-2} \\
+		        &          &         & \beta_{k-1}
+ \end{matrix}
+&  \begin{matrix} 0 \\ \vdots \\ \vdots \\ 0 \\ \alpha_{k-1} \end{matrix} \\
+\hline
+\begin{matrix} 0 & \cdots  & \cdots & 0  \end{matrix} & \beta_{k}
+\end{array}\end{pmatrix}
+ = Q_{k-1}
+\begin{pmatrix}\begin{array}{c|c}
+\begin{matrix}
+ \rho_1     & \theta_2 &         &      \\
+            & \rho_2   & \ddots  &      \\
+            &          & \ddots  & \theta_{k-2}     \\
+            &          &         & \rho_{k-2} \\
+		    &          &         & 0 
+ \end{matrix}
+&  \begin{matrix} 0 \\ \vdots \\ 0 \\ \theta_{k-1} \\ \hat{\rho}_{k-1} \end{matrix} \\
+\hline
+\begin{matrix} 0 & \cdots  & \cdots & 0  \end{matrix} & \beta_{k}
+\end{array}\end{pmatrix} \\
+&=& Q_{k-1} G^{(1)}_k
+\begin{pmatrix}\begin{array}{c|c}
+\begin{matrix}
+ \rho_1    & \theta_2 &         &      \\
+            & \rho_2   & \ddots  &      \\
+            &          & \ddots  & \theta_{k-2}     \\
+            &          &         & \rho_{k-2} \\
+		        &          &         & 0 
+ \end{matrix}
+&  \begin{matrix} 0 \\ \vdots \\ \vdots \\ \theta_{k-1} \\ \rho_{k-1} \end{matrix} \\
+\hline
+\begin{matrix} 0 & \cdots  & \cdots & 0  \end{matrix} & 0
+\end{array}\end{pmatrix} = Q_{k-1} G^{(1)}_k
+\begin{pmatrix}
+R_{k-1} \\
+\hline
+0 \end{pmatrix},
+\end{eqnarray*}
+by defining $Q_k = Q_{k-1}G^{(1)}_k$, where $G^{(1)}_k$ is the Givens rotation
+$$G^{(1)}_k = \begin{pmatrix}
+c_1 & s_1 \\
+-s_1 & c_1
+\end{pmatrix}. $$
+Using $G^{(2)}_{k-1}$ defined in the previous iteration, we have
+\[ \begin{pmatrix} \theta_{k-1} \\ \hat{\rho}_{k-1} \end{pmatrix}
+= \begin{pmatrix}  
+c^{(k-1)}_1 & -s^{(k-1)}_1 \\
+s^{(k-1)}_1 & c^{(k-1)}_1 \end{pmatrix}
+\begin{pmatrix} 0 \\ \alpha_{k-1} \end{pmatrix},
+\]
+\[
+\begin{pmatrix} \theta_{k} \\ \hat{\rho}_{k} \end{pmatrix}
+= \begin{pmatrix}  c_1 & -s_1 \\ s_1 & c_1 \end{pmatrix}
+\begin{pmatrix} 0 \\ \alpha_{k} \end{pmatrix},
+\]
+\[ \begin{pmatrix} \rho_{k-1} \\ 0 \end{pmatrix}
+= \begin{pmatrix}  c_1 & -s_1 \\ s_1 & c_1 \end{pmatrix}
+\begin{pmatrix} \hat{\rho}_{k-1} \\ \beta_k \end{pmatrix},
+\]
+and we therefore obtain the recurrences
+\begin{eqnarray}
+\hat{\rho}_{k-1} &=& \frac{\alpha_{k-1}\hat{\rho}_{k-2}}{\rho_{k-2}} = c_1^{(k-1)}\alpha_{k-1}, \\
+\rho_{k-1} &=& \sqrt{\hat{\rho}^2_{k-1} + \beta^2_k }, \\
+c_1 &=& \hat{\rho}_{k-1}/\rho_{k-1}, \\
+s_1 &=& -\beta_k/\rho_{k-1}, \\
+\theta_{k} &=& \frac{\alpha_k\beta_k}{\rho_{k-1}} = -s_1 \alpha_k.
+\end{eqnarray}
+
+\subsection{Forward Substitution}
+With the previous QR decomposition, the system we intend to solve becomes
+\begin{eqnarray*} 
+\begin{pmatrix}
+\alpha_1\beta_1 \\ 0 \\ \vdots \\ 0
+\end{pmatrix} &=& \begin{pmatrix}\begin{array}{c|c}
+ B^T_{k-1}B_{k-1} &  \begin{matrix} 0 \\ \vdots \\ 0  \\ \alpha_k\beta_k \end{matrix} 
+\end{array}\end{pmatrix} y_k 
+= \begin{pmatrix}\begin{array}{c|c}
+ R^T_{k}R_{k} &  \begin{matrix} 0 \\ \vdots \\ 0  \\ \alpha_k\beta_k \end{matrix} 
+\end{array}\end{pmatrix} y_k \\
+&=& R^T_{k} \begin{pmatrix}\begin{array}{c|c}
+ R_{k} &  \begin{matrix} 0 \\ \vdots \\ 0  \\ \frac{\alpha_k\beta_k}{\rho_{k-1}} \end{matrix} 
+\end{array}\end{pmatrix} y_k
+= R^T_{k} \begin{pmatrix}\begin{array}{c|c}
+ R_{k} &  \begin{matrix} 0 \\ \vdots \\ 0  \\ \theta_{k} \end{matrix} 
+\end{array}\end{pmatrix} y_k.
+\end{eqnarray*}
+
+Define
+\begin{equation}
+z_k = \begin{pmatrix}
+\zeta_2 \\ \vdots \\ \zeta_{k}
+\end{pmatrix} = \begin{pmatrix}\begin{array}{c|c}
+ R_{k} &  \begin{matrix} 0 \\ \vdots \\ 0  \\ \theta_{k} \end{matrix} 
+\end{array}\end{pmatrix} y_k = \tilde{R}_k y_k
+\end{equation}
+so that we have $R^T_k z_k = \alpha_1 \beta_1 e_1$.
+As in the Conjugate Gradient method, we obtain a short recurrence for $\zeta_k$,
+\begin{equation}
+\zeta_k = -\frac{\theta_{k-1}}{\rho_{k-1}} \zeta_{k-1}.
+\end{equation}
+
+\subsection{Second QR decomposition}
+Using the recurrence of the previous section, we now need to solve the minimum norm problem
+$$ \tilde{R}_k y_k = z_k. $$
+We accomplish this by taking the QR decomposition of $\hat{Q_k}\hat{R_k} = \tilde{R}^T_k$. Suppose we have the QR decomposition from the previous iteration, $\hQ_{k-1}\hat{R}_{k-1} = \tilde{R}^T_{k-1}$, with
+
+\begin{equation*}
+\hat{R}_{k-1} = \begin{pmatrix}
+\sigma_1 & \eta_2 & & \\
+& \sigma_2 & \ddots & \\
+& & \ddots & \eta_{k-1} \\
+& & & \sigma_{k-2}
+\end{pmatrix}.
+\end{equation*}
+
+Then as was done in the first QR decomposition, we can recurse to obtain a fast update for the second QR decomposition.
+
+\begin{eqnarray*}
+\tilde{R}_k^T &=&
+\begin{pmatrix}\begin{array}{c|c}
+\begin{matrix}
+  \rho_1  &          &         &      \\
+  \theta_2   & \rho_2 &         &      \\
+            & \ddots   & \ddots  &      \\
+            &          & \theta_{k-2} & \rho_{k-2} \\
+		        &          &         & \theta_{k-1}
+ \end{matrix}
+&  \begin{matrix} 0 \\ \vdots \\ \vdots \\ 0 \\ \rho_{k-1} \end{matrix} \\
+\hline
+\begin{matrix} 0 & \cdots  & \cdots & 0  \end{matrix} & \theta_{k}
+\end{array}\end{pmatrix}
+= \hQ_k
+\begin{pmatrix}\begin{array}{c|c}
+\begin{matrix}
+ \sigma_1    & \eta_2 &         &      \\
+            & \sigma_2   & \ddots  &      \\
+            &          & \ddots  & \eta_{k-2}     \\
+            &          &         & \sigma_{k-2} \\
+		        &          &         & 0 
+ \end{matrix}
+&  \begin{matrix} 0 \\ \vdots \\ \vdots \\ \eta_{k-1} \\ \hat{\sigma}_{k-1} \end{matrix} \\
+\hline
+\begin{matrix} 0 & \cdots  & \cdots & 0  \end{matrix} & \theta_{k}
+\end{array}\end{pmatrix} \\
+ &=& \hQ_k G^{(2)}_k
+\begin{pmatrix}\begin{array}{c|c}
+\begin{matrix}
+ \sigma_1    & \eta_2 &         &      \\
+            & \sigma_2   & \ddots  &      \\
+            &          & \ddots  & \eta_{k-2}     \\
+            &          &         & \sigma_{k-2} \\
+		        &          &         & 0 
+ \end{matrix}
+&  \begin{matrix} 0 \\ \vdots \\ \vdots \\ \eta_{k-1} \\ \sigma_{k-1} \end{matrix} \\
+\hline
+\begin{matrix} 0 & \cdots  & \cdots & 0  \end{matrix} & 0
+\end{array}\end{pmatrix}
+\end{eqnarray*}
+
+We define $\hQ_k = \hQ_{k-1}G^{(2)}_k$, where $G^{(2)}_k$ is the Givens rotation
+$$G^{(2)}_k = \begin{pmatrix}
+c_2 & s_2 \\
+-s_2 & c_2
+\end{pmatrix}. $$
+Using $G^{(2)}_{k-1}$ defined in the previous iteration, we have
+
+\[ \begin{pmatrix} \eta_{k-1} \\ \hat{\sigma}_{k-1} \end{pmatrix}
+= \begin{pmatrix}  c^{(k-1)}_2 & -s^{(k-1)}_2 \\
+ s^{(k-1)}_2 & c^{(k-1)}_2 \end{pmatrix}
+\begin{pmatrix} 0 \\ \rho_{k-1} \end{pmatrix},
+\]
+\[ \begin{pmatrix} \eta_{k} \\ \hat{\sigma}_{k} \end{pmatrix}
+= \begin{pmatrix}  c_2 & -s_2 \\ s_1 & c_2 \end{pmatrix}
+\begin{pmatrix} 0 \\ \rho_{k} \end{pmatrix},
+\]
+\[ \begin{pmatrix} \sigma_{k-1} \\ 0 \end{pmatrix}
+= \begin{pmatrix}  c_2 & -s_2 \\ s_2 & c_2 \end{pmatrix}
+\begin{pmatrix} \hat{\sigma}_{k-1} \\ \theta_k \end{pmatrix}.
+\]
+
+We then obtain the following recurrences,
+\begin{eqnarray}
+\eta_{k-1} &=& -s^{(k-1)}_2 \rho_{k-1} \\
+\hat{\sigma}_{k-1} &=& \frac{\rho_{k-1}\hat{\sigma}_{k-2}}{\sigma_{k-2}} = c^{(k-1)}_2\rho_{k-1}, \\
+\sigma_{k-1} &=& \sqrt{\hat{\sigma}^2_{k-1} + \theta^2_k }, \\
+c_2 &=& \hat{\sigma}_{k-1}/\sigma_{k-1}, \\
+s_2 &=& -\theta_k/\sigma_{k-1}, \\
+\eta_k &=& \frac{\rho_k\theta_k}{\sigma_{k-1}} = -s_2\rho_k. \\
+\end{eqnarray}
+
+\subsection{Recurrence for $x_k$}
+We now derive a fast recurrence for $x_k$ using the second QR decomposition. From the second QR decomposition, we have
+\begin{equation*}
+\hat{R}^T_k \hQ^T_k y_k = z_k.
+\end{equation*}
+Define
+\begin{eqnarray}
+\hat{R}^T_k \hat{z}_k &=& z_k \\
+\hQ_k \Ik \hat{z}_k &=& y_k, \qquad \hat{z}_k = \begin{pmatrix} \hat{\zeta_2} \\ \vdots \\ \hat{\zeta_k} \end{pmatrix}  \\
+W_k &=& V_k \hQ_k = (w^{(k)}_2 | \dots | w^{(k)}_{k}).
+\end{eqnarray}
+With these definitions, we have,
+$$ W_k \Ik \hat{z}_k = V_k \hQ_k \Ik \hat{z}_k = V_k y_k = x_k,  $$
+and so
+$$ x_k = W_{k-1} \begin{pmatrix} I_{k-2} \\ 0\end{pmatrix} \hat{z}_{k-1} + w^{(k)}_{k-1} \hat{\zeta}_k. $$
+The recursion for $\hat{z}_k$ is similar to that of $z_k$, since it is a similar triangular solve via forward substitution, where we obtain
+\begin{equation}
+\hat{\zeta}_k = \frac{1}{\sigma_{k-1}} ( \zeta_k - \eta_{k-1} \hat{\zeta}_{k-1} ).
+\end{equation}
+To get the recursion for $W_k$, we observe that
+\begin{eqnarray}
+W_k &=& V_k \hQ_k \\
+&=& (V_{k-1} | v_k) \begin{pmatrix}
+\hQ_{k-1} & \\ & 1
+\end{pmatrix} \begin{pmatrix}
+I_{k-2} & \\ & G^{(2)}_k
+\end{pmatrix} \\
+&=& (W_{k-1} | v_k) \begin{pmatrix}
+I_{k-2} & \\ & G^{(2)}_k
+\end{pmatrix} \\
+&=& (w^{(k-1)}_1 | \dots | w^{(k-1)}_{k-2} | w^{(k-1)}_{k-1} | v_k) \begin{pmatrix}
+I_{k-2} & \\ & G^{(2)}_k
+\end{pmatrix}.
+\end{eqnarray}
+Then we see that the first $k-2$ columns of $W_{k-1}$ and $W_k$ are equal to each other, and so the only update that is required is
+\begin{equation}
+\begin{pmatrix} w^{(k)}_{k-1} & w^{(k)}_k \end{pmatrix} = 
+\begin{pmatrix} w^{(k-1)}_{k-1} & v_k \end{pmatrix}
+\begin{pmatrix}  c_2 & s_2 \\ -s_2 & c_2 \end{pmatrix}.
+\end{equation}
+Although we compute both $w^{(k)}_{k-1}$ and $w^{(k)}_k$, we need only $w^{(k)}_{k-1}$ in order to compute $x_k$, while $w^{(k)}_k$ is necessary for the computation of $W_{k+1}$.
+
+We summarize this procedure in Algorithm \ref{lslq1}.
+
+\begin{algorithm}
+\caption{LSLQ}
+\label{lslq1}
+\begin{algorithmic}
+	\State $\beta_1 u_1 = b$, $\alpha_1 v_1 = A^T u_1$
+	\State $\beta_{2} u_{2} = A v_{1} - \alpha_{1} u_{1}$
+	\State $\alpha_{2} v_{2} = A^T u_{2} - \beta_{2} v_{1}$
+	\State $\rho_2 = \sqrt{\alpha^2_1 + \beta^2_2}$
+	\State $c^{(2)}_1 = \alpha_1 / \rho_2$,\qquad $s^{(2)}_1 = \beta_2 / \rho_2$
+	\State $\theta_2 = \alpha_2 \beta_2 / \rho_2$
+	\State
+	\State $\zeta_2 = \alpha_1 \beta_1 / \rho_2$
+	\State
+	\State $\hat{\sigma}_2 = \rho_2$
+	\State $\sigma_2 = \sqrt{\hat{\sigma}^2_2 + \theta^2_2}$
+	\State $c^{(2)}_2 = \hat{\sigma}_2 / \sigma_2$,\qquad $s^{(2)}_2 = -\theta_2 / \sigma_2$
+	\State
+	\State $\hat{\zeta}_2 = \zeta_2 / \sigma_2$
+	\State
+	\State $\begin{pmatrix} w^{(2)}_{1} & w^{(2)}_2 \end{pmatrix} = 
+			\begin{pmatrix} v_1 & v_2 \end{pmatrix}
+			\begin{pmatrix} c^{(2)}_2 & -s^{(2)}_2 \\ s^{(2)}_2 & c^{(2)}_2 \end{pmatrix}$
+	\State $x_k = \hat{\zeta}_2 w^{(2)}_{1}$	
+	
+	\For {$k=3,\dots$}
+		\State $\beta_{k} u_{k} = A v_{k-1} - \alpha_{k-1} u_{k-1}$
+		\State $\alpha_{k} v_{k} = A^T u_{k} - \beta_{k} v_{k-1}$
+		\State
+		\State $\hat{\rho}_{k-1} = c^{(k-1)}_1 \alpha_{k-1}$
+		\State $\rho_{k-1} = \sqrt{\hat{\rho}^2_{k-1} + \beta^2_k}$
+		\State $c^{(k)}_1 = \hat{\rho}_{k-1} / \rho_{k-1}$,\qquad $s^{(k)}_1 = \beta_k / \rho_{k-1}$
+		\State $\theta_k = -s^{(k)}_k \alpha_k$
+		\State
+		\State $\zeta_k = -\zeta_{k-1} \theta_{k-1} / \rho_{k-1}$
+		\State
+		\State $\eta_{k-1} = -s^{(k-1)}_2 \rho_{k-1}$
+		\State $\hat{\sigma}_{k-1} = c^{(k-1)}_2 \rho_{k-1}$
+		\State $\sigma_{k-1} = \sqrt{\hat{\sigma}^2_{k-1} + \theta^2_k}$
+		\State $c^{(k)}_2 = \hat{\sigma}_{k-1} / \sigma_{k-1}$,\qquad $s^{(k)}_2 = -\theta_k / \sigma_{k-1}$
+		\State
+		\State $\hat{\zeta}_k = (\zeta_k - \eta_{k-1} \hat{\zeta}_{k-1}) / \sigma_{k-1}$
+		\State
+		\State $\begin{pmatrix} w^{(k)}_{k-1} & w^{(k)}_k \end{pmatrix} = 
+			\begin{pmatrix} w^{(k-1)}_{k-1} & v_k \end{pmatrix}
+			\begin{pmatrix} c^{(k)}_2 & -s^{(k)}_2 \\ s^{(k)}_2 & c^{(k)}_2 \end{pmatrix}$
+		\State $x_k = x_{k-1} + \hat{\zeta}_k w^{(k)}_{k-1}$
+	\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\end{document}
