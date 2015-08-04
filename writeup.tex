@@ -326,7 +326,7 @@ We now derive a fast recurrence for $x_k$ using the second QR decomposition. Fro
 Define
 \begin{eqnarray}
 \hat{R}^T_k \hat{z}_k &=& z_k \\
-\hQ_k \Ik \hat{z}_k &=& y_k, \qquad \hat{z}_k = \begin{pmatrix} \hat{\zeta_2} \\ \vdots \\ \hat{\zeta_k} \end{pmatrix}  \\
+\label{yzhat} \hQ_k \Ik \hat{z}_k &=& y_k, \qquad \hat{z}_k = \begin{pmatrix} \hat{\zeta_2} \\ \vdots \\ \hat{\zeta_k} \end{pmatrix}  \\
 W_k &=& V_k \hQ_k = (w^{(k)}_2 | \dots | w^{(k)}_{k}).
 \end{eqnarray}
 With these definitions, we have,
@@ -411,5 +411,128 @@ We summarize this procedure in Algorithm \ref{lslq1}.
 	\EndFor
 \end{algorithmic}
 \end{algorithm}
+
+\section{Norms and Stopping Criteria}
+Here we will derive recurrences for computing estimates of $\Vert r_k \Vert$, $\Vert A^T r_k \Vert$, $\Vert A \Vert$ and $cond(A)$.
+
+\subsection{Recurrence for $y_k$}
+\label{reccY}
+Here we derive a recurrence for the last two entries of $y_k$, which will be used in the estimates of the norm quantities in which we are interested. From equation \ref{yzhat}, we have that
+\begin{eqnarray*}
+y_k &=& \hQ_k \Ik \begin{pmatrix} \hat{\zeta_2} \\ \vdots \\ \hat{\zeta_k} \end{pmatrix} \\
+&=& \begin{pmatrix}
+G^{(2)}_{k-1} & \\ & 1
+\end{pmatrix}\begin{pmatrix}
+I_{k-2} & \\ & G^{(2)}_k
+\end{pmatrix} \begin{pmatrix} \hat{\zeta_2} \\ \vdots \\ \hat{\zeta_k} \\ 0 \end{pmatrix} \\
+&=& \begin{pmatrix}
+\times & \cdots & \times \\
+\times & \cdots & \times \\
+ & \ddots & \vdots  \\
+ & s^{(2)}_{k-1} & -c^{(2)}_{k-1} c^{(2)}_k \\
+ & 0 & s^{(2)}_k
+\end{pmatrix} \begin{pmatrix} \hat{\zeta_2} \\ \vdots \\ \hat{\zeta_k} \end{pmatrix}.
+\end{eqnarray*}
+Thus we can obtain the last 2 entries of $y_k$ from
+\begin{equation}
+\begin{pmatrix}
+\psi^{(k)}_1 \\ \psi^{(k)}_2
+\end{pmatrix} =
+\begin{pmatrix}
+ s^{(2)}_{k-1} & -c^{(2)}_{k-1} c^{(2)}_k \\
+ 0 & s^{(2)}_k
+\end{pmatrix} \begin{pmatrix}
+\hat{\zeta}_{k-1} \\ \hat{\zeta}_k
+\end{pmatrix}.
+\end{equation}
+
+\subsection{Recurrence for $\Vert r_k \Vert$}
+We observe the following relationships based on the equations
+\begin{eqnarray}
+\tilde{R}_k y_k &=& z_k \\
+R^T_{k+1} z_{k+1} &=& \alpha_1 \beta_1 e_1 \\
+Q_{k+1} R_{k+1} &=& B_k.
+\end{eqnarray}
+Taking the transpose of the second equation and defining $q^{(k+1)} = \beta_1 Q^T_{k+1} e_1$, we see that
+\begin{eqnarray}
+R^T_{k+1} Q^T_{k+1} &=& B^T_k \\
+R^T_{k+1} q^{(k+1)} &=& \alpha_1 \beta_1 e_1.
+\end{eqnarray}
+We can obtain a recurrence for $q^{(k+1)}$ by observing that
+\begin{eqnarray*}
+q^{(k+1)} &=& \beta_1 Q^T_{k+1} e_1 \\
+&=& \beta_1 \begin{pmatrix}
+I_{k-2} & \\ & \left(G^{(1)}_{k+1}\right)^T
+\end{pmatrix} \begin{pmatrix}
+Q^T_{k} & \\ & 1
+\end{pmatrix} e_1 \\
+&=& \begin{pmatrix}
+I_{k-2} & \\ & \left(G^{(1)}_{k+1}\right)^T
+\end{pmatrix} \begin{pmatrix} q^{(k)} \\ 0 \end{pmatrix} = \begin{pmatrix} q^{(k)}_1 \\ \vdots \\ q^{(k)}_{k-1} \\ q^{(k)}_k c^{(k+1)}_1\\ -q^{(k)}_k s^{(k+1)}_1 \end{pmatrix}.
+\end{eqnarray*}
+Now, since $R^T_{k+1}$ is nonsingular, we have that
+\begin{equation}
+q^{(k+1)} = \begin{pmatrix}
+z_{k+1} \\ -q^{(k)}_k s^{(k+1)}_1 
+\end{pmatrix}.
+\end{equation}
+We now use this relationship to obtain a short recurrence for $\Vert r_k \Vert$. Thus
+\begin{eqnarray*}
+\Vert r_k \Vert &=& \Vert b - A x_k \Vert \\
+&=& \Vert U_{k+1} (\beta_1 e_1 - B_k y_k) \Vert \\
+&=& \Vert Q^T_{k+1} (\beta_1 e_1 - B_k y_k) \Vert \\
+&=& \left\Vert \beta_1 Q^T_{k+1} e_1 - \begin{pmatrix} R_{k+1} \\ 0 \end{pmatrix} y_k \right\Vert \\
+&=& \left\Vert \beta_1 Q^T_{k+1} e_1 - \begin{pmatrix} R_{k+1} \\ 0 \end{pmatrix} y_k \right\Vert \\
+&=& \left\Vert \beta_1 Q^T_{k+1} e_1 - \begin{pmatrix} z_k \\ \rho_k \psi^{(k)}_2 \\ 0 \end{pmatrix} \right\Vert \\
+&=& \left\Vert \begin{pmatrix}
+0 \\ -q^{(k)}_k c^{(k+1)}_1 - \rho_k \psi^{(k)}_2 \\ q^{(k)}_k s^{(k+1)}_1 
+\end{pmatrix} \right\Vert.
+\end{eqnarray*}
+Since we require only the last 2 entries of $q^{(k+1)}$ for which we have a fast recurrence, the computation of $\Vert r_k \Vert$ can be achieved in $O(1)$ flops. Note that in order to estimate the residual at iteration $k$, we need values computed at iteration $k+1$.
+
+\subsection{Recurrence for $\Vert A^T r_k \Vert$}
+We can obtain an estimate of $\Vert A^T r_k \Vert_2$ with $O(1)$ flops. We have
+\begin{eqnarray*}
+\Vert A^T r_k \Vert &=& \Vert A^T (b - Ax_k) \Vert \\
+&=& \Vert V_{k+1} (\alpha_1 \beta_1 e_1 - L^T_{k+1} B_{k+1} y_k) \Vert \\
+&=& \Vert \alpha_1 \beta_1 e_1 - L^T_{k+1} B_{k+1} y_k \Vert.
+\end{eqnarray*}
+We note that
+\begin{eqnarray*}
+L_{k+1}^T B_{k+1} y_k &=& 
+\begin{pmatrix} \begin{array}{c|c}
+\begin{matrix} B^T_{k-1} \end{matrix}
+&  \begin{matrix} 0 \\ \vdots \\ 0 \\  \end{matrix} \\
+\hline
+\begin{matrix} 0 & \cdots & \alpha_k \end{matrix} & \beta_{k+1} \\
+\hline
+\begin{matrix} 0 & \cdots &  0 \end{matrix} & \alpha_{k+1}
+\end{array}\end{pmatrix}
+\begin{pmatrix}
+\begin{matrix} L^T_{k} \end{matrix} \\
+\beta_{k+1} e_k^T
+\end{pmatrix} y_k \\
+&=&
+\begin{pmatrix}
+\begin{matrix} B^T_{k-1} L_k \end{matrix} \\
+\alpha_k \beta_k e^T_{k-1} + (\alpha^2_k + \beta^2_{k+1}) e^T_k \\
+\alpha_{k+1} \beta_{k+1} e^T_{k}
+\end{pmatrix} y_k \\
+&=&
+\begin{pmatrix}
+\alpha_1 \beta_1 e_1 \\ (\alpha_k \beta_k e_{k-1} + (\alpha^2_k + \beta^2_{k+1}) e_k)^T y_k \\ \alpha_{k+1} \beta_{k+1} e^T_{k} y_k
+\end{pmatrix}.
+\end{eqnarray*}
+Thus we have
+\begin{eqnarray*}
+\Vert \alpha_1 \beta_1 e_1 - L^T_{k+1} B_{k+1} y_k \Vert = \left\Vert \begin{pmatrix}
+0 \\ (\alpha_k \beta_k e_{k-1} + (\alpha^2_k + \beta^2_{k+1}) e_k)^T y_k \\ \alpha_{k+1} \beta_{k+1} e^T_{k} y_k
+\end{pmatrix} \right\Vert,
+\end{eqnarray*}
+and so we need only the last 2 entries of $y_k$ which we can obtain in $O(1)$ flops as described in Section \ref{reccY}.
+
+\subsection{Estimate of $\Vert A \Vert$ and $cond(A)$}
+As in LSMR, we may estimate $\Vert A \Vert$ by using $\Vert B_k \Vert_F$. In order to estimate $\text{cond} (A)$, we note that $\text{cond}(A)^2 = \text{cond}(A^T A)$, and that we may estimate $\text{cond}(A^T A)$ by $\text{cond}(B_k^T B_k)$. Since $B_k^T B_k = R_{k+1}^T R_{k+1}$, we can estimate $\text{cond}(A)$ by $\text{cond}(R_k)$ at each iteration. $\text{cond}(R_k)$ may the be estimated by the largest and smallest entries on its diagonal, that is, $\max \sigma_i / \min \sigma_i$.
+
 
 \end{document}
