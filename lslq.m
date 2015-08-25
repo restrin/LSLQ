@@ -79,7 +79,7 @@ function [x, flag, iter, relres, normAr, resvec] = lslq( A, b, atol, btol, conli
     m = size(b,1);
     n = size(v,1);
   end
-
+  
   minDim = min([m n]);
   
   % Set default parameters.
@@ -124,7 +124,7 @@ function [x, flag, iter, relres, normAr, resvec] = lslq( A, b, atol, btol, conli
       v = v/alpha;
     end
   end
-    
+  
   % First iteration
   rho = sqrt(alphap^2 + beta^2);
   c1  = alphap / rho;
@@ -248,7 +248,7 @@ function [x, flag, iter, relres, normAr, resvec] = lslq( A, b, atol, btol, conli
     W = W*[c2 s2; -s2 c2];
 
     x = x + zz*W(:,1);
-     
+    
     y = [sp -cp*c2;0 s2]*[zzp; zz];
     
   end
