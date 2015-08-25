@@ -20,10 +20,12 @@ LSLQ Solver }
 \maketitle
 
 \section{Abstract}
+In the spirit of LSQR and LSMR, which apply CG and MINRES respectively to the normal equations, we derive LSLQ, which applies SYMMLQ to the normal equations. Starting from the normal equations, and SYMMLQ subproblem, we derive short recurrences for the computation of iterates and residual norm estimates. We then evaluate the effectiveness of SYMMLQ on some linear systems and least-squares problems, and make comparisons to LSMR.
 
-\section{Introduction}
 \subsection{Notation}
-$\KK = \KK (A^T A, b) = \mathrm{span}\left(b, A^T A b, \dots, (A^T A)^{k-1} b \right)$.
+We denote matrices by capital letters, vectors by lower case letters, and scalars are denoted by greek lower case letters. There will be some occasions where we abuse matrix notation by multiplying matrices of incorrect sizes when the matrices are meant to be applied to only a subset of the rows or columns of another matrix.
+We denote the Krylov subspace of size $k$ by 
+$$\KK = \KK (A^T A, b) = \mathrm{span}\left(b, A^T A b, \dots, (A^T A)^{k-1} b \right)$$.
 
 \section{Derivation of LSLQ}
 In this section, we derive the short recurrence formulas for LSLQ beginning from the Golub-Kahan process.
@@ -171,6 +173,7 @@ $$G^{(1)}_k = \begin{pmatrix}
 c_1 & s_1 \\
 -s_1 & c_1
 \end{pmatrix}. $$
+Note that we are abusing notation, where we intend $G_k^{(1)}$ to be applied to rows $k-2$ and $k-1$. 
 Using $G^{(2)}_{k-1}$ defined in the previous iteration, we have
 \[ \begin{pmatrix} \theta_{k-1} \\ \hat{\rho}_{k-1} \end{pmatrix}
 = \begin{pmatrix}  
@@ -292,6 +295,7 @@ $$G^{(2)}_k = \begin{pmatrix}
 c_2 & s_2 \\
 -s_2 & c_2
 \end{pmatrix}. $$
+We are again abusing notation, so that $G_k^{(2)}$ is applied to rows $k-2$ and $k-1$.
 Using $G^{(2)}_{k-1}$ defined in the previous iteration, we have
 
 \[ \begin{pmatrix} \eta_{k-1} \\ \hat{\sigma}_{k-1} \end{pmatrix}
@@ -534,5 +538,7 @@ and so we need only the last 2 entries of $y_k$ which we can obtain in $O(1)$ fl
 \subsection{Estimate of $\Vert A \Vert$ and $cond(A)$}
 As in LSMR, we may estimate $\Vert A \Vert$ by using $\Vert B_k \Vert_F$. In order to estimate $\text{cond} (A)$, we note that $\text{cond}(A)^2 = \text{cond}(A^T A)$, and that we may estimate $\text{cond}(A^T A)$ by $\text{cond}(B_k^T B_k)$. Since $B_k^T B_k = R_{k+1}^T R_{k+1}$, we can estimate $\text{cond}(A)$ by $\text{cond}(R_k)$ at each iteration. $\text{cond}(R_k)$ may the be estimated by the largest and smallest entries on its diagonal, that is, $\max \sigma_i / \min \sigma_i$.
 
+\section{Numerical Experiments}
+In this section we apply LSLQ to some linear systems and least-squares problems to evaluate its effectiveness. LSLQ has been implemented in Matlab for these experiments.
 
 \end{document}
