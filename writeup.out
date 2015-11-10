@@ -1,0 +1,15 @@
+\BOOKMARK [1][-]{section.1}{Abstract}{}% 1
+\BOOKMARK [2][-]{subsection.1.1}{Notation}{section.1}% 2
+\BOOKMARK [1][-]{section.2}{Derivation of LSLQ}{}% 3
+\BOOKMARK [2][-]{subsection.2.1}{Golub-Kahan Process}{section.2}% 4
+\BOOKMARK [2][-]{subsection.2.2}{The LSLQ subproblem}{section.2}% 5
+\BOOKMARK [2][-]{subsection.2.3}{First QR decomposition}{section.2}% 6
+\BOOKMARK [2][-]{subsection.2.4}{Forward Substitution}{section.2}% 7
+\BOOKMARK [2][-]{subsection.2.5}{Second QR decomposition}{section.2}% 8
+\BOOKMARK [2][-]{subsection.2.6}{Recurrence for xk}{section.2}% 9
+\BOOKMARK [1][-]{section.3}{Norms and Stopping Criteria}{}% 10
+\BOOKMARK [2][-]{subsection.3.1}{Recurrence for yk}{section.3}% 11
+\BOOKMARK [2][-]{subsection.3.2}{Recurrence for "026B30D rk "026B30D }{section.3}% 12
+\BOOKMARK [2][-]{subsection.3.3}{Recurrence for "026B30D AT rk "026B30D }{section.3}% 13
+\BOOKMARK [2][-]{subsection.3.4}{Estimate of "026B30D A "026B30D \040and cond\(A\)}{section.3}% 14
+\BOOKMARK [1][-]{section.4}{Numerical Experiments}{}% 15

@@ -1,10 +1,13 @@
 \documentclass[11pt]{article}
 \usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphics}
 \usepackage{graphicx}
 \usepackage{float}
 \usepackage[margin=1in]{geometry}
 \usepackage{algorithm}
-\usepackage{algpseudocode} 
+\usepackage{algpseudocode}
+%\usepackage{hyperref}
+\usepackage{subfigure}
 
 % Macros
 \newcommand{\KK}{\mathcal{K}_k}
@@ -19,7 +22,7 @@ LSLQ Solver }
 \date{}
 \maketitle
 
-\section{Abstract}
+\section{Introduction}
 In the spirit of LSQR and LSMR, which apply CG and MINRES respectively to the normal equations, we derive LSLQ, which applies SYMMLQ to the normal equations. Starting from the normal equations, and SYMMLQ subproblem, we derive short recurrences for the computation of iterates and residual norm estimates. We then evaluate the effectiveness of SYMMLQ on some linear systems and least-squares problems, and make comparisons to LSMR.
 
 \subsection{Notation}
@@ -539,6 +542,133 @@ and so we need only the last 2 entries of $y_k$ which we can obtain in $O(1)$ fl
 As in LSMR, we may estimate $\Vert A \Vert$ by using $\Vert B_k \Vert_F$. In order to estimate $\text{cond} (A)$, we note that $\text{cond}(A)^2 = \text{cond}(A^T A)$, and that we may estimate $\text{cond}(A^T A)$ by $\text{cond}(B_k^T B_k)$. Since $B_k^T B_k = R_{k+1}^T R_{k+1}$, we can estimate $\text{cond}(A)$ by $\text{cond}(R_k)$ at each iteration. $\text{cond}(R_k)$ may the be estimated by the largest and smallest entries on its diagonal, that is, $\max \sigma_i / \min \sigma_i$.
 
 \section{Numerical Experiments}
-In this section we apply LSLQ to some linear systems and least-squares problems to evaluate its effectiveness. LSLQ has been implemented in Matlab for these experiments.
+In this section we apply LSLQ to some linear systems and least-squares problems to evaluate its effectiveness. LSLQ has been implemented in Matlab for these experiments, and we compare it to the MATLAB implementations of LSQR and LSMR. LSQR is provided as part of MATLAB, while we obtain LSMR from http://web.stanford.edu/group/SOL/software/lsmr/.
+
+For a given problem, we record for every iteration the following quantities for every method: $\Vert x_* - x_k \Vert_2$, $\Vert A^T r_k \Vert$, $\Vert r_k \Vert_2$, where $x_*$ is the solution to the problem. We can obtain $x_*$ for least squares problems by solving the system
+$$ \begin{pmatrix}
+I & A \\
+A^T & 0 \\
+\end{pmatrix} \begin{pmatrix}
+r_* \\ x_*
+\end{pmatrix} = \begin{pmatrix}
+b \\ 0
+\end{pmatrix}, $$
+using MATLAB's backslash command. If $A$ is square and nonsingular, we take $x_* = A \setminus b$, via MATLAB again. Note that $\Vert r \Vert_2$ is not particularly interesting for least squares problems, but we include it when looking at nonsingular square systems.
+
+We first consider least squares problem Kemelmacher, obtained from Tim Davis' sparse matrix collection. In this case $A$ is a $28452 \times 9693$ matrix, and we let $b$ be a random right-hand side. The termination criteria is taken as $\Vert A^T r_k \Vert \leq 10^{-10} \Vert A \Vert \Vert r_k \Vert$ for all 3 methods. In this case we obtain the plots seen in Figures \ref{fig:kemel1}-\ref{fig:kemel4}.
+
+\begin{figure}[ht]
+\centering
+	\subfigure[$\Vert x_* - x_k \Vert_2$ per iteration]
+	{
+		\label{fig:kemel1}
+		\includegraphics[width=0.48\textwidth]{Figures/Kemelmacher/forwarderror.eps}	
+	}
+	\hfill
+	\subfigure[$\Vert A^T r_k \Vert_2$ per iteration]
+	{
+		\label{fig:kemel2}
+		\includegraphics[width=0.48\textwidth]{Figures/Kemelmacher/normAr.eps}	
+	}
+	
+	\subfigure[$\Vert r_k \Vert_2$ per iteration]
+	{	
+		\label{fig:kemel3}
+		\includegraphics[width=0.48\textwidth]{Figures/Kemelmacher/normr.eps}	
+	}
+	\hfill
+	\subfigure[$\Vert x_* - x_k \Vert_2$ vs. $\Vert A^T r_k \Vert_2$]
+	{
+		\label{fig:kemel4}
+		\includegraphics[width=0.48\textwidth]{Figures/Kemelmacher/forwarderrvsAr.eps}	
+	}
+	
+	\caption{LSLQ, LSQR and LSMR results when run on the Kemelmacher problem.}
+\end{figure}
+
+It is evident that LSLQ lags behind both LSQR and LSMR for minimizing the forward error, $A^T r_k$ and the residual. Furthermore, LSQR and LSMR guarantee monotonic decrease in the residual $r_k$ (as CG and MINRES guarantee this for positive definite systems such as the normal equations), whereas LSLQ may increase the residual substantially as the iterations progress before converging towards a similar residual norm.
+
+On the other hand, LSLQ demonstrates an interesting property that upon convergence according to the stopping criteria, it obtains a solution that is closer to the true solution by two orders of magnitude. Even though all 3 methods terminated according to the same stopping criteria, which is based on the residual, LSLQ produced the smallest error in the end. Although LSLQ was lagging behind LSMR and LSQR, it appears that upon termination LSLQ would be able to guarantee better bounds on the forward error, at the cost of more iterations. Remark that LSMR was the first to terminate due to it minimizing $\Vert A^T r_k \Vert_2$, but the solution it found had an error from the true solution orders of magnitude much larger than either LSQR or LSLQ.
+
+This phenomenon is illustrated in Figure \ref{fig:kemel4}, where we plot $\Vert x_* - x_k \Vert_2$ on the vertical axis, and $\Vert A^T r_k \Vert_2$ on the horizontal axis. This plot should be read right to left, as initially $\Vert A^T r_k \Vert$ is large and is being decreased as the iterations progress. Let $x^{LQ}_\ell$, $x^{QR}_p$, and $x^{MR}_k$ be the iterates for LSLQ, LSQR, and LSMR at the $\ell$, $p$ and $k$ iterations respectively. This figure then shows that if
+$$ \Vert A^T (b - A x^{LQ}_\ell) \Vert_2 \approx \Vert A^T (b - A x^{QR}_p) \Vert_2 \approx \Vert A^T (b - A x^{MR}_k) \Vert_2,$$
+then
+$$ \Vert x_* - x^{LQ}_\ell \Vert_2 \leq \Vert x_* - x^{QR}_p \Vert_2 \leq \Vert x_* -  x^{MR}_k \Vert_2.$$
+It may be possible to estimate $\Vert x_* - x_k \Vert_2$ in SYMMLQ, and if a reasonable upper bound can be established per iteration, then transferring to the CG as in SYMMLQ would produce a method which would take roughly as many iterations as LSQR while guaranteeing sharper bounds on the forward error.
+
+We repeat this experiment for lp\_osa\_30, which is a least squares problem of size $104374 \times 4350$ obtained from the Tim Davis Sparse matrix collection. We present the results in Figures \ref{fig:lp301}-\ref{fig:lp304}.
+
+\begin{figure}[ht]
+\centering
+	\subfigure[$\Vert x_* - x_k \Vert_2$ per iteration]
+	{
+		\label{fig:lp301}
+		\includegraphics[width=0.48\textwidth]{Figures/lposa30/forwarderror.eps}	
+	}
+	\hfill
+	\subfigure[$\Vert A^T r_k \Vert_2$ per iteration]
+	{
+		\label{fig:lp302}
+		\includegraphics[width=0.48\textwidth]{Figures/lposa30/normAr.eps}	
+	}
+	
+	\subfigure[$\Vert r_k \Vert_2$ per iteration]
+	{	
+		\label{fig:lp303}
+		\includegraphics[width=0.48\textwidth]{Figures/lposa30/normr.eps}	
+	}
+	\hfill
+	\subfigure[$\Vert x_* - x_k \Vert_2$ vs. $\Vert A^T r_k \Vert_2$]
+	{
+		\label{fig:lp304}
+		\includegraphics[width=0.48\textwidth]{Figures/lposa30/forwarderrvsAr.eps}	
+	}
+	
+	\caption{LSLQ, LSQR and LSMR results when run on the lpo\_sa\_30 problem.}
+\end{figure}
+
+The results in this case are very similar to what was seen when the three methods were applied to the Kemelmacher problem.
+
+We now test LSLQ on a nonsymmetric nonsingular square matrix. We take rdb3200l from the Tim Davis Sparse matrix collection, which is a $3200 \times 3200$ matrix. We plot the results in Figures \ref{fig:rdb1}-\ref{fig:rdb5}. These figures plot the same things as in the least squares problems, but we add figure \ref{fig:rdb5}, which plots $\Vert x_* - x_k \Vert_2$ against $\Vert r_k \Vert$, since we expect $r_k \rightarrow 0$ since the system is nonsingular. Note that since the problem is nonsingular now, the termination criteria is based on $\Vert r_k \Vert_2 \leq 10^{-10} \Vert b \Vert$.
+
+\begin{figure}[ht]
+\centering
+	\subfigure[$\Vert x_* - x_k \Vert_2$ per iteration]
+	{
+		\label{fig:rdb1}
+		\includegraphics[width=0.48\textwidth]{Figures/rdb3200l/forwarderror.eps}	
+	}
+	\hfill
+	\subfigure[$\Vert A^T r_k \Vert_2$ per iteration]
+	{
+		\label{fig:rdb2}
+		\includegraphics[width=0.48\textwidth]{Figures/rdb3200l/normAr.eps}	
+	}
+	
+	\subfigure[$\Vert r_k \Vert_2$ per iteration]
+	{	
+		\label{fig:rdb3}
+		\includegraphics[width=0.48\textwidth]{Figures/rdb3200l/normr.eps}	
+	}
+	\hfill
+	\subfigure[$\Vert x_* - x_k \Vert_2$ vs. $\Vert A^T r_k \Vert_2$]
+	{
+		\label{fig:rdb4}
+		\includegraphics[width=0.48\textwidth]{Figures/rdb3200l/forwarderrvsAr.eps}	
+	}
+	
+	\subfigure[$\Vert x_* - x_k \Vert_2$ vs. $\Vert r_k \Vert_2$]
+	{
+		\label{fig:rdb5}
+		\includegraphics[width=0.48\textwidth]{Figures/rdb3200l/forwarderrvsr.eps}	
+	}	
+	
+	\caption{LSLQ, LSQR and LSMR results when run on the rdb3200l problem.}
+\end{figure}
+
+The behaviour on this problem for the three methods is qualitatively no different from what was seen in the least squares problem. LSLQ lags behind the other methods based on the norm of the residual, $A^T r_k$, and the forward error. Interestingly, we do see LSQR perform slightly better than LSMR based on the residual, while LSMR consistently maintains a lower $\Vert A^T r_k \Vert_2$ (as it should be minimizing it for every iteration). But upon termination, LSLQ achieves a forward error 2 orders of magnitude lower than LSQR and LSMR, even though they all terminate around the same value of $\Vert r_k \Vert_2$. This phenomenon is again captured in figures \ref{fig:rdb4} and \ref{fig:rdb5}, where for similar residuals, LSLQ attains a lower forward error.
+
+\section{Conclusion}
+LSLQ is a method equivalent to SYMMLQ being applied to the normal equations has been derived and implemented in this project, in an approach similar to LSMR and LSQR. We've applied the method to several problems to investigate the performance of LSLQ compared to LSMR and LSQR, and found that although it does not converge as quickly as LSMR and LSQR to the solution, upon termination it appears to guarantee a lower forward error, often by over one order of magnitude, at the cost of more iterations. If an upper bound can be developed for $\Vert x_* - x_k \Vert_2$ to monitor the progress of LSLQ, and coupled with an upper bound on the error after transferring to the CG point, LSLQ can be a method that has performance similar to LSQR with stronger guarantees.
 
 \end{document}
